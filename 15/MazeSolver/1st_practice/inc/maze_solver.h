@@ -14,18 +14,17 @@ enum	DIRECTION { NORTH, SOUTH, EAST, WEST };
 enum	RESULT    { FAIL, SUCCEED }; 
 
 #include <stdio.h>
-
 #include <stdlib.h>
 
 typedef struct s_map
 {
 	unsigned int	map_width;
 	unsigned int	map_height;
-	int				**map_saved;
+	int				**map_converted;
 }	t_map;
 
 //main
-int	handle_error(int flg, char *s1, char *s2);
+int	handle_error(int flg, char *s1, char *s2, FILE *fp);
 
 //readmap.c
 int	read_map(t_map *m, char *map);

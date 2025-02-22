@@ -23,3 +23,7 @@
 	//update actual x,y pos
 	void	move();
 ```
+
+
+# DAY 1 (2025.02.22)
+- to fix: read_line , understand fgets and rewrite this
