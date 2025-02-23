@@ -13,9 +13,25 @@
 3. created map_converted (int **)
 	- for later use (path finding)
 */
+int		convert_char(char c)
+{
+	if (c == WALL)
+		return (1);
+	else if (c == WAY)
+		return (0);
+	else if (c == GOAL)
+		return (2);
+	else if (c == START)
+		return (3);
+	else
+		return (-1);
+}
+
 int		create_map_converted(t_map *m)
 {
 	int	i;
+	int	j = 0;
+	int k;
 
 	m->map_converted = malloc(m->map_height * sizeof(int *));
 	if (!m->map_converted)
@@ -25,16 +41,26 @@ int		create_map_converted(t_map *m)
 	{
 		m->map_converted[i] = malloc(m->map_width * sizeof(int));
 		if (!m->map_converted[i])
+		{
+			free_int_arr(m->map_converted, --i);
+			return (handle_error(1, NULL, NULL, 0));
+		}
+		i++;
 	}
-
-
+	while (j < m->map_height)
+	{
+		k = 0;
+		while (k < m->map_width)
+		{
+			m->map_converted[j][k] = convert_char(m->map_original[j][k]);
+			k++;
+		}
+		j++;
+	}
+	return (0);
 }
 
-void	print_2d_map(char **map, int height)
-{
-	for (int i = 0; i < height; i++)
-		printf("%s\n", map[i]); // Print each row of the map
-}
+
 
 // Function to save a 2D map from a string
 int save_2d_map(t_map *m, char *s)
@@ -109,9 +135,7 @@ int	read_map_from_input(t_map *m, char *s)
 	}
 	tmp_map[total] = '\0';
 	if (bytes_read < 0)
-		return (handle_error(2, buff, &tmp_map, fd));
+		return (handle_error(2, buff, (void **)&tmp_map, fd));
 	save_2d_map(m, tmp_map);
-	print_2d_map(m->map_original, m->map_height);
-	printf("leng[%d], height[%d]", m->map_width, m->map_height);
 	return (0);
 }

@@ -3,7 +3,8 @@ NAME		=	maze_solver
 OBJ_DIR		=	obj
 
 SRC			=	main.c \
-				read_map.c
+				read_map.c \
+				debug.c
 
 OBJ			= $(SRC:%.c=$(OBJ_DIR)/%.o)
 

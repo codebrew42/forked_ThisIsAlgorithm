@@ -28,11 +28,17 @@ typedef struct s_map
 }	t_map;
 
 //main
+int	free_int_arr(int **arr, int max_i);
 int	handle_error(int flg, void *s, void **d, int fd);
 
 //readmap.c
-void print_2d_map(char **map, int height);
+int		create_map_converted(t_map *m);
 int save_2d_map(t_map *m, char *s);
 int	read_map_from_input(t_map *m, char *s);
+
+
+//debug.c
+void print_2d_map_char(char **map, int height);
+void print_2d_map_int(int **map, int height, int width);
 
 #endif
