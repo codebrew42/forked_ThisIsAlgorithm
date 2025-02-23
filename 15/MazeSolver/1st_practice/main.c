@@ -1,26 +1,34 @@
 #include "inc/maze_solver.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
-int	handle_error(int flg, char *s1, char *s2, FILE *fp)
+int	handle_error(int flg, void *s, void **d, int fd)
 {
-	//malloc
 	if (flg == 0)
-		fprintf(stderr, "malloc failed");
+		fprintf(stderr, "malloc failed\n");
 	else if (flg == 1)
-	{
-		perror("reading the map failed");
-	}
+		perror("opening the map failed");
 	else if (flg == 2)
-	{
+		perror("reading the map failed");
+	else if (flg == 3)
 		perror("fgets failed");
+	if (s)
+		free(s);
+
+	if (d)
+	{
+		void **tmp = d;
+		while (*tmp)
+			free(*tmp++);
+		free(d);
 	}
-	if (s1)
-		free(s1);
-	if (s2)
-		free(s2);
-	if (fp)
-		fclose(fp);
+
+	if (fd)
+		close(fd);
 	return (1);
 }
+
 
 int	main(int ac, char **av)
 {
@@ -31,14 +39,21 @@ int	main(int ac, char **av)
 		printf("Map is not given\n");
 		return (0);
 	}
-	d_map = malloc(sizeof(t_map *));
+	d_map = malloc(sizeof(t_map));
 	if (!d_map)
-		handle_error(0, NULL, NULL, NULL);
-	init_map_scale(d_map, 50, 50);
-	read_map(d_map, av[1]);
+		handle_error(0, NULL, NULL, 0);
+	if (av[1] == NULL)
+		return 1; 
+	if (read_map_from_input(d_map, av[1]))
+	{
+		free(d_map);
+		return (1);
+	}
+
 	// if (!validate_map(d_map))
 	// {
 	// 	printf("not valid map: path finding impossibled\n");
 	// }
-
+	free (d_map);
+	return (0);
 }

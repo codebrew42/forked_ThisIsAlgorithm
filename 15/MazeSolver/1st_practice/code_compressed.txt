@@ -1,0 +1,134 @@
+File: main.c
+#include "inc/maze_solver.h"
+
+int	handle_error(int flg, char *s, char **d, int fd) //FILE *fp instead of int fd : poss
+{
+	char **tmp;
+
+	if (flg == 0)
+		fprintf(stderr, "malloc failed");
+	else if (flg == 1)
+		perror("opening the map failed");
+	else if (flg == 2)
+		perror("reading the map failed");
+	else if (flg == 3)
+		perror("fgets failed");
+	if (s)
+		free(s);
+	if (d)
+	{
+		tmp = d;
+		while (*tmp)
+			free(*tmp++);
+		free(d);
+	}
+	if (fd)
+		fclose(fd);
+	return (1);
+}
+
+
+int	main(int ac, char **av)
+{
+	t_map	*d_map;
+
+	if (ac != 2)
+	{
+		printf("Map is not given\n");
+		return (0);
+	}
+	d_map = malloc(sizeof(t_map));
+	if (!d_map)
+		handle_error(0, NULL, NULL, NULL);
+	printf("A");
+	if (av[1] == NULL)
+		return 1; 
+	if (init_map_scale(d_map, 15, 16))
+	{
+		free(d_map);
+		return (1);
+	}
+	if (read_map(d_map, av[1]))
+	{
+		free(d_map);
+		return (1);
+	}
+
+	// if (!validate_map(d_map))
+	// {
+	// 	printf("not valid map: path finding impossibled\n");
+	// }
+	free (d_map);
+	return (0);
+}File: move.c
+File: read_map.c
+#include "inc/maze_solver.h"
+
+//cp map to the char**
+/*
+1. validate the map (pass this case)
+	assume that the maps are valid (surrounded by walls)
+
+2. read map from input
+	-cp map to the struct
+		use BUFFER_SIZE (default)
+	-save maps height, width
+
+3. created map_converted (int **)
+	- for later use (path finding)
+*/
+
+int	read_map_from_input(t_map *m, char *s)
+{
+	int		fd;
+	char	*buff;
+	int		bytes_read;
+
+	fd = open(s, O_RDONLY);
+	if (fd == -1)
+		return (handle_error(1, NULL, NULL, fd));
+	buff = malloc (BUFFER_SIZE + 1);
+	if (!buff)
+		handle_error(0, NULL, NULL, fd);
+	while ((bytes_read = read(fd, buff, BUFFER_SIZE)) > 0)
+	{
+		m->map_original
+
+	}
+}File: maze_solver.h
+#ifndef MAZESOLVER_H
+#define MAZESOLVER_H
+
+#define BUFFER_SIZE 1024
+#define INIT_VALUE -1
+
+#define START    'S'    // start 
+#define GOAL     'G'    // exist 
+#define WAY      ' '    // way1
+#define WALL     '#'    // wall
+#define MARKED   '+'    // way2
+
+enum	DIRECTION { NORTH, SOUTH, EAST, WEST };
+enum	RESULT    { FAIL, SUCCEED }; 
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+typedef struct s_map
+{
+	int				map_width;
+	int				map_height;
+	char			**map_original;
+	int				**map_converted;
+}	t_map;
+
+//main
+int	handle_error(int flg, char *s1, char *s2, FILE *fp);
+
+//readmap.c
+int	read_map(t_map *m, char *map);
+int	init_map_scale(t_map *m, int x, int y);
+
+#endif

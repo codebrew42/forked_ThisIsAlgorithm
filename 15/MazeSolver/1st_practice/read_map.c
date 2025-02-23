@@ -1,80 +1,117 @@
 #include "inc/maze_solver.h"
 
-int		convert_map(char c);
-int		read_map(t_map *m, char *map);
-int		init_map_scale(t_map *m, int x, int y);
+//cp map to the char**
+/*
+1. validate the map (pass this case)
+	assume that the maps are valid (surrounded by walls)
 
-int	convert_map(char c)
+2. read map from input
+	-cp map (1)to char* -(2) create char ** in the struct
+		use BUFFER_SIZE (default)
+	-save maps height, width
+
+3. created map_converted (int **)
+	- for later use (path finding)
+*/
+int		create_map_converted(t_map *m)
 {
-	if (c == WALL)
-		return 1;
-	return 0;
-}
+	int	i;
 
-//change map to 0,1
-//hint: open()-fopen, gnl, close
-int read_map(t_map *m, char *map)
-{
-	FILE	*fp;
-	char	*buffer;
-	int		i;
-	int		j;
-	int		k;
-	
-	fp = fopen(map, "r"); // "r" : opens a file for reading
-	if (!fp)
-		return (handle_error(1, NULL, NULL, NULL));
-	buffer = malloc((m->map_height * m->map_width) + 1);
-	if (!buffer)
-	{
-		fclose(fp);
-		return (handle_error(0, NULL, NULL, NULL));
-	}
-	j = 0;
-	//fgets : read
-	while (fgets(buffer, sizeof(buffer), fp))
-	{
-		k = 0;
-		i = 0;
-		while (buffer[k] && buffer[k] != '\n')
-		{
-			m->map_converted[j][i] = convert_map(buffer[k]);
-			printf("buffer[%d]=[%c]  is converted to converted[%d][%d]", k, buffer[i], j, i);
-			if (buffer[k] == '\n' || buffer[k + 1] == '\0')
-				m->map_converted[j][i++] = '\0';
-			i++;
-			k++;
-		}
-		j++;
-	}
-	if (ferror(fp))
-		return (handle_error(2, buffer, NULL, fp));
-	fclose(fp);
-	free(buffer);
-	return (0);
-}
-
-//temporary func, fix : get x and y from map
-int	init_map_scale(t_map *m, int x, int y)
-{
-	unsigned int		i;
-
-	m->map_width = x;
-	m->map_height = y;
-	m->map_converted = malloc (m->map_height * sizeof(int *));
+	m->map_converted = malloc(m->map_height * sizeof(int *));
 	if (!m->map_converted)
-		return (handle_error(0, NULL, NULL, NULL));
+		return (handle_error(0, NULL, NULL, 0));
 	i = 0;
 	while (i < m->map_height)
 	{
-		m->map_converted[i] = malloc (m->map_width * sizeof(int));
+		m->map_converted[i] = malloc(m->map_width * sizeof(int));
 		if (!m->map_converted[i])
+	}
+
+
+}
+
+void	print_2d_map(char **map, int height)
+{
+	for (int i = 0; i < height; i++)
+		printf("%s\n", map[i]); // Print each row of the map
+}
+
+// Function to save a 2D map from a string
+int save_2d_map(t_map *m, char *s)
+{
+	int			line_count = 0;
+	char		*line_start = s;
+	char		*newline;
+	ssize_t		length;
+
+	while ((newline = strchr(line_start, '\n')) != NULL)
+	{
+		line_count++;
+		line_start = newline + 1; // Move to the start of the next line
+	}
+	// If the string does not end with a newline, account for the last line
+	if (*line_start != '\0')
+		line_count++;
+	m->map_original = malloc(line_count * sizeof(char *));
+	if (!m->map_original)
+		return (handle_error(0, NULL, NULL, 0));
+	// Fill the 2D map with strings from the input string
+	line_start = s; // Reset to the start of the string
+	for (int i = 0; i < line_count; i++)
+	{
+		newline = strchr(line_start, '\n');
+		if (newline)		// Calculate the length of the current line (excluding the newline)
 		{
-			while (m->map_converted[--i])
-				free(m->map_converted[i]);
-			free(m->map_converted);
-			return (handle_error(0, NULL, NULL, 0));
+			length = newline - line_start;
+			m->map_original[i] = malloc((length + 1) * sizeof(char)); // Allocate exactly the size needed
+			if (!m->map_original[i])
+				return (handle_error(0, NULL, NULL, 0));
+			strncpy(m->map_original[i], line_start, length);
+			m->map_original[i][length] = '\0';
+			line_start = newline + 1; // Move to the start of the next line
+		}
+		else		// For the last line without a newline
+		{
+			m->map_original[i] = strdup(line_start);
+			if (!m->map_original[i])
+				return (handle_error(0, NULL, NULL, 0));
 		}
 	}
+	m->map_height = line_count;
+	m->map_width = (int)length;
+	return (0);
+}
+
+int	read_map_from_input(t_map *m, char *s)
+{
+	int		fd;
+	char	*buff;
+	char	*tmp_map = NULL;
+	int		bytes_read;
+	int		total;
+
+	if (!m || !s)
+		return (1);
+	fd = open(s, O_RDONLY);
+	if (fd == -1)
+		return (handle_error(1, NULL, NULL, fd));
+	buff = malloc (BUFFER_SIZE + 1);
+	if (!buff)
+		handle_error(0, NULL, NULL, fd);
+	total = 0;
+	while ((bytes_read = read(fd, buff, BUFFER_SIZE)) > 0)
+	{
+		tmp_map = realloc(tmp_map, total + bytes_read);
+		if (!tmp_map)
+			handle_error(0, buff, NULL, fd);
+		memmove(tmp_map + total, buff, bytes_read);
+		total += bytes_read;
+	}
+	tmp_map[total] = '\0';
+	if (bytes_read < 0)
+		return (handle_error(2, buff, &tmp_map, fd));
+	save_2d_map(m, tmp_map);
+	print_2d_map(m->map_original, m->map_height);
+	printf("leng[%d], height[%d]", m->map_width, m->map_height);
 	return (0);
 }

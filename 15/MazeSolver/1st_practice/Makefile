@@ -1,6 +1,6 @@
-NAME		= maze_solver
+NAME		=	maze_solver
 
-OBJ_DIR		= obj
+OBJ_DIR		=	obj
 
 SRC			=	main.c \
 				read_map.c
@@ -8,16 +8,16 @@ SRC			=	main.c \
 OBJ			= $(SRC:%.c=$(OBJ_DIR)/%.o)
 
 CC			= gcc
-CFLAGS		= -Wall -Wextra -Werror
+CFLAGS		= -Wall -Wextra -Werror -Iinc -g
 
 # Compilation rule
-$(OBJ_DIR)/%.o: %.c
+$(OBJ_DIR)/%.o: %.c inc/maze_solver.h
 	@mkdir -p $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Linking rule
 $(NAME): $(OBJ)
-	$(CC) $(OBJ) -o $@
+	$(CC) $(OBJ) -o obj/$@
 
 clean:
 	$(RM) -rf $(OBJ_DIR)

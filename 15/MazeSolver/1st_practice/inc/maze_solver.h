@@ -1,7 +1,7 @@
 #ifndef MAZESOLVER_H
 #define MAZESOLVER_H
 
-#define MAX_BUFFER 1024
+#define BUFFER_SIZE 1024
 #define INIT_VALUE -1
 
 #define START    'S'    // start 
@@ -15,19 +15,24 @@ enum	RESULT    { FAIL, SUCCEED };
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <string.h>
 
 typedef struct s_map
 {
-	unsigned int	map_width;
-	unsigned int	map_height;
+	int				map_width;
+	int				map_height;
+	char			**map_original;
 	int				**map_converted;
 }	t_map;
 
 //main
-int	handle_error(int flg, char *s1, char *s2, FILE *fp);
+int	handle_error(int flg, void *s, void **d, int fd);
 
 //readmap.c
-int	read_map(t_map *m, char *map);
-int	init_map_scale(t_map *m, int x, int y);
+void print_2d_map(char **map, int height);
+int save_2d_map(t_map *m, char *s);
+int	read_map_from_input(t_map *m, char *s);
 
 #endif
