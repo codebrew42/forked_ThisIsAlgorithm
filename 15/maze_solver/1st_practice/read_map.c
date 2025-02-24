@@ -19,9 +19,9 @@ int		convert_char(char c)
 		return (1);
 	else if (c == WAY)
 		return (0);
-	else if (c == GOAL)
-		return (2);
 	else if (c == START)
+		return (2);
+	else if (c == GOAL)
 		return (3);
 	else
 		return (-1);

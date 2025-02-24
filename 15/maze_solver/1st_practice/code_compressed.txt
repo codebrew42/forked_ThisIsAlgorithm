@@ -1,12 +1,47 @@
-File: main.c
+File: debug.c
 #include "inc/maze_solver.h"
 
-int	handle_error(int flg, char *s, char **d, int fd) //FILE *fp instead of int fd : poss
+void print_2d_map_int(int **map, int height, int width)
 {
-	char **tmp;
+	int i = 0;
+	int j;
 
+	while (i < height)
+	{
+		j = 0;
+		while (j < width)
+			printf("%d", map[i][j++]);
+		printf("\n");
+		i++;
+	}
+}
+
+void print_2d_map_char(char **map, int height)
+{
+	for (int i = 0; i < height; i++)
+		printf("%s\n", map[i]); // Print each row of the map
+}File: main.c
+#include "inc/maze_solver.h"
+
+
+int	free_int_arr(int **arr, int max_i)
+{
+	if (!arr || !*arr)
+		return (1);
+	if (*arr)
+	{
+		while (max_i-- > 0)
+		{
+			free(arr[max_i]);
+		}
+	}
+	free (arr);
+	return (0);
+}
+int	handle_error(int flg, void *s, void **d, int fd)
+{
 	if (flg == 0)
-		fprintf(stderr, "malloc failed");
+		fprintf(stderr, "malloc failed\n");
 	else if (flg == 1)
 		perror("opening the map failed");
 	else if (flg == 2)
@@ -15,50 +50,57 @@ int	handle_error(int flg, char *s, char **d, int fd) //FILE *fp instead of int f
 		perror("fgets failed");
 	if (s)
 		free(s);
+
 	if (d)
 	{
-		tmp = d;
+		void **tmp = d;
 		while (*tmp)
 			free(*tmp++);
 		free(d);
 	}
+
 	if (fd)
-		fclose(fd);
+		close(fd);
 	return (1);
 }
 
 
 int	main(int ac, char **av)
 {
-	t_map	*d_map;
+	t_map	*m;
 
 	if (ac != 2)
 	{
 		printf("Map is not given\n");
 		return (0);
 	}
-	d_map = malloc(sizeof(t_map));
-	if (!d_map)
-		handle_error(0, NULL, NULL, NULL);
-	printf("A");
+	m = malloc(sizeof(t_map));
+	if (!m)
+		handle_error(0, NULL, NULL, 0);
 	if (av[1] == NULL)
 		return 1; 
-	if (init_map_scale(d_map, 15, 16))
+	if (read_map_from_input(m, av[1]))
 	{
-		free(d_map);
+		free(m);
 		return (1);
 	}
-	if (read_map(d_map, av[1]))
+	if (create_map_converted(m))
 	{
-		free(d_map);
+		free(m);
 		return (1);
 	}
+	printf("map_converted:\n");
+	print_2d_map_int(m->map_converted, m->map_height, m->map_width);
+	if (!find_start(m, &m->start_x, &m->start_y))
+		return (1);
 
-	// if (!validate_map(d_map))
-	// {
-	// 	printf("not valid map: path finding impossibled\n");
-	// }
-	free (d_map);
+	printf("start_x[%d], start_y[%d] found\n", m->start_x, m->start_y);
+	set_dir(m->dir_x, m->dir_y);
+	if (create_map_marked(m))
+		return (1);
+	if (!validate_map(m, m->start_x, m->start_y))
+		printf("valid map found: path finding possible\n");
+	free (m);
 	return (0);
 }File: move.c
 File: read_map.c
@@ -70,32 +112,263 @@ File: read_map.c
 	assume that the maps are valid (surrounded by walls)
 
 2. read map from input
-	-cp map to the struct
+	-cp map (1)to char* -(2) create char ** in the struct
 		use BUFFER_SIZE (default)
 	-save maps height, width
 
 3. created map_converted (int **)
 	- for later use (path finding)
 */
+int		convert_char(char c)
+{
+	if (c == WALL)
+		return (1);
+	else if (c == WAY)
+		return (0);
+	else if (c == START)
+		return (2);
+	else if (c == GOAL)
+		return (3);
+	else
+		return (-1);
+}
+
+int		create_map_converted(t_map *m)
+{
+	int	i;
+	int	j = 0;
+	int k;
+
+	m->map_converted = malloc(m->map_height * sizeof(int *));
+	if (!m->map_converted)
+		return (handle_error(0, NULL, NULL, 0));
+	i = 0;
+	while (i < m->map_height)
+	{
+		m->map_converted[i] = malloc(m->map_width * sizeof(int));
+		if (!m->map_converted[i])
+		{
+			free_int_arr(m->map_converted, --i);
+			return (handle_error(1, NULL, NULL, 0));
+		}
+		i++;
+	}
+	while (j < m->map_height)
+	{
+		k = 0;
+		while (k < m->map_width)
+		{
+			m->map_converted[j][k] = convert_char(m->map_original[j][k]);
+			k++;
+		}
+		j++;
+	}
+	return (0);
+}
+
+
+
+// Function to save a 2D map from a string
+int save_2d_map(t_map *m, char *s)
+{
+	int			line_count = 0;
+	char		*line_start = s;
+	char		*newline;
+	ssize_t		length;
+
+	while ((newline = strchr(line_start, '\n')) != NULL)
+	{
+		line_count++;
+		line_start = newline + 1; // Move to the start of the next line
+	}
+	// If the string does not end with a newline, account for the last line
+	if (*line_start != '\0')
+		line_count++;
+	m->map_original = malloc(line_count * sizeof(char *));
+	if (!m->map_original)
+		return (handle_error(0, NULL, NULL, 0));
+	// Fill the 2D map with strings from the input string
+	line_start = s; // Reset to the start of the string
+	for (int i = 0; i < line_count; i++)
+	{
+		newline = strchr(line_start, '\n');
+		if (newline)		// Calculate the length of the current line (excluding the newline)
+		{
+			length = newline - line_start;
+			m->map_original[i] = malloc((length + 1) * sizeof(char)); // Allocate exactly the size needed
+			if (!m->map_original[i])
+				return (handle_error(0, NULL, NULL, 0));
+			strncpy(m->map_original[i], line_start, length);
+			m->map_original[i][length] = '\0';
+			line_start = newline + 1; // Move to the start of the next line
+		}
+		else		// For the last line without a newline
+		{
+			m->map_original[i] = strdup(line_start);
+			if (!m->map_original[i])
+				return (handle_error(0, NULL, NULL, 0));
+		}
+	}
+	m->map_height = line_count;
+	m->map_width = (int)length;
+	return (0);
+}
 
 int	read_map_from_input(t_map *m, char *s)
 {
 	int		fd;
 	char	*buff;
+	char	*tmp_map = NULL;
 	int		bytes_read;
+	int		total;
 
+	if (!m || !s)
+		return (1);
 	fd = open(s, O_RDONLY);
 	if (fd == -1)
 		return (handle_error(1, NULL, NULL, fd));
 	buff = malloc (BUFFER_SIZE + 1);
 	if (!buff)
 		handle_error(0, NULL, NULL, fd);
+	total = 0;
 	while ((bytes_read = read(fd, buff, BUFFER_SIZE)) > 0)
 	{
-		m->map_original
-
+		tmp_map = realloc(tmp_map, total + bytes_read);
+		if (!tmp_map)
+			handle_error(0, buff, NULL, fd);
+		memmove(tmp_map + total, buff, bytes_read);
+		total += bytes_read;
 	}
-}File: maze_solver.h
+	tmp_map[total] = '\0';
+	if (bytes_read < 0)
+		return (handle_error(2, buff, (void **)&tmp_map, fd));
+	save_2d_map(m, tmp_map);
+	return (0);
+}
+File: validate_map.c
+#include "inc/maze_solver.h"
+
+/* how to validate recursively? [backtracking]
+
+steps
+[1]find_start(m, *x, *y)
+	change value directly with pointer x,y
+[1]move_func(m, x, y)
+	if (WALL, outside map)
+		early return (1)
+	if (GOAL)
+		return (0) //means valid
+	while (i <= 4)
+		new_x <- x
+		new_y <- y
+		if (!validate_map(m, new_x, new_y))
+			return (0)
+
+
+early ret :
+base case(normal ret) : if(GOAL found) then {return 0}
+
+*/
+int find_start(t_map *m, int *x, int *y);
+void set_dir(int x[4], int y[4]);
+int create_map_marked(t_map *m);
+int validate_map(t_map *m, int x, int y);
+
+
+
+int find_start(t_map *m, int *x, int *y)
+{
+	int i;
+	int j;
+
+	i = 0;
+	while (i < m->map_height)
+	{
+		j = 0;
+		while (j < m->map_width)
+		{
+			if (m->map_converted[i][j] == 2)
+			{
+				*x = j;
+				*y = i;
+				return (1);
+			}
+			j++;
+		}
+		i++;
+	}
+	return (0);
+}
+
+void set_dir(int x[4], int y[4])
+{
+	x[0] = 1;
+	x[1] = -1;
+	x[2] = 0;
+	x[3] = 0;
+	y[0] = 0;
+	y[1] = 0;
+	y[2] = 1;
+	y[3] = -1;
+}
+
+int create_map_marked(t_map *m)
+{
+	int i;
+
+	m->map_marked = malloc(m->map_height * sizeof(int *));
+	if (!m->map_marked)
+		return (handle_error(0, NULL, (void **)m->map_marked, 0));
+	i = 0;
+	while (i < m->map_height)
+	{
+		m->map_marked[i] = malloc(m->map_width * sizeof(int));
+		if (!m->map_marked[i])
+			return (handle_error(0, NULL, (void **)m->map_marked, 0));
+		memcpy(m->map_marked[i], m->map_converted[i], m->map_width * sizeof(int));
+		i++;
+	}
+	printf("map_marked:\n");
+	print_2d_map_int(m->map_marked, m->map_height, m->map_width);
+	return (0);
+}
+
+int validate_map(t_map *m, int x, int y)
+{
+	int i;
+
+	if (x >= m->map_width || y >= m->map_height || x < 0 || y < 0)
+		return (1);
+	else if (m->map_converted[y][x] == WALL)
+		return (1);
+	else if (m->map_converted[y][x] == GOAL)
+	{
+		printf("A valid way found!\n map_marked:\n");
+		print_2d_map_int(m->map_marked, m->map_height, m->map_width);
+		return (0);
+	}
+	else if (m->map_converted[y][x] == WAY)
+	{
+		printf("approaching to map[%d][%d]\n", y, x);
+	}
+	m->map_marked[y][x] = 2;
+	printf("MARKED: map[%d][%d]\n", y, x);
+
+//	printf("approached: m->map_marked[%d][%d] is marked as 2\n", y, x);
+	i = 0;
+	while (i < 4)
+	{
+		if (!validate_map(m, x + m->dir_x[i], y + m->dir_y[i]))
+			return (0);
+		i++;
+	}
+	//unmark if no path found(backtracking)
+	m->map_marked[y][x] = m->map_converted[y][x];
+		printf("UNMARKED: map[%d][%d]\n", y, x);
+
+	return (1);
+}
+File: maze_solver.h
 #ifndef MAZESOLVER_H
 #define MAZESOLVER_H
 
@@ -115,20 +388,39 @@ enum	RESULT    { FAIL, SUCCEED };
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <string.h>
 
 typedef struct s_map
 {
 	int				map_width;
 	int				map_height;
+	int				start_x;
+	int				start_y;
+	int				dir_x[4];
+	int				dir_y[4];
 	char			**map_original;
 	int				**map_converted;
+	int				**map_marked;
 }	t_map;
 
 //main
-int	handle_error(int flg, char *s1, char *s2, FILE *fp);
+int	free_int_arr(int **arr, int max_i);
+int	handle_error(int flg, void *s, void **d, int fd);
 
 //readmap.c
-int	read_map(t_map *m, char *map);
-int	init_map_scale(t_map *m, int x, int y);
+int		create_map_converted(t_map *m);
+int save_2d_map(t_map *m, char *s);
+int	read_map_from_input(t_map *m, char *s);
 
+
+//debug.c
+void print_2d_map_char(char **map, int height);
+void print_2d_map_int(int **map, int height, int width);
+
+//validate_map.c
+
+int find_start(t_map *m, int *x, int *y);
+void set_dir(int x[4], int y[4]);
+int create_map_marked(t_map *m);
+int validate_map(t_map *m, int x, int y);
 #endif

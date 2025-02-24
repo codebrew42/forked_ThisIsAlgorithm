@@ -66,11 +66,17 @@ int	main(int ac, char **av)
 		free(m);
 		return (1);
 	}
+	printf("map_converted:\n");
 	print_2d_map_int(m->map_converted, m->map_height, m->map_width);
-	// if (!validate_map(m))
-	// {
-	// 	printf("not valid map: path finding impossible\n");
-	// }
+	if (!find_start(m, &m->start_x, &m->start_y))
+		return (1);
+
+	printf("start_x[%d], start_y[%d] found\n", m->start_x, m->start_y);
+	set_dir(m->dir_x, m->dir_y);
+	if (create_map_marked(m))
+		return (1);
+	if (!validate_map(m, m->start_x, m->start_y))
+		printf("valid map found: path finding possible\n");
 	free (m);
 	return (0);
 }

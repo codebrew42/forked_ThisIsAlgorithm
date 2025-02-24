@@ -23,8 +23,13 @@ typedef struct s_map
 {
 	int				map_width;
 	int				map_height;
+	int				start_x;
+	int				start_y;
+	int				dir_x[4];
+	int				dir_y[4];
 	char			**map_original;
 	int				**map_converted;
+	int				**map_marked;
 }	t_map;
 
 //main
@@ -41,4 +46,10 @@ int	read_map_from_input(t_map *m, char *s);
 void print_2d_map_char(char **map, int height);
 void print_2d_map_int(int **map, int height, int width);
 
+//validate_map.c
+
+int find_start(t_map *m, int *x, int *y);
+void set_dir(int x[4], int y[4]);
+int create_map_marked(t_map *m);
+int validate_map(t_map *m, int x, int y);
 #endif

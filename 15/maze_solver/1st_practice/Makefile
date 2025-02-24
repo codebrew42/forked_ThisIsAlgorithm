@@ -4,7 +4,8 @@ OBJ_DIR		=	obj
 
 SRC			=	main.c \
 				read_map.c \
-				debug.c
+				debug.c \
+				validate_map.c
 
 OBJ			= $(SRC:%.c=$(OBJ_DIR)/%.o)
 
