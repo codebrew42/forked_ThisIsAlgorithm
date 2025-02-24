@@ -90,7 +90,7 @@ int validate_map(t_map *m, int x, int y)
 	int i;
 
 
-	if (x >= m->map_width || y >= m->map_height || x < 0 || y < 0)
+	if (x > m->map_width || y > m->map_height || x < 0 || y < 0)
 		return (1);
 	else if (x == m->map_width && y == m->map_height)
 		return (1);
@@ -111,17 +111,20 @@ int validate_map(t_map *m, int x, int y)
 	m->map_marked[y][x] = 2;
 	printf("MARKED: map_marked[%d][%d] = %d\n", y, x, m->map_marked[y][x]);
 	print_2d_map_int(m->map_marked, m->map_height, m->map_width);
-	usleep(600000);
+	usleep(200000);
 //	printf("approached: m->map_marked[%d][%d] is marked as 2\n", y, x);
 	i = 0;
 	while (i < 4)
 	{
 		if (!validate_map(m, x + m->dir_x[i], y + m->dir_y[i]))
+		{
 			return (0);
+		}
 		i++;
 	}
 	//unmark if no path found(backtracking)
-	m->map_marked[y][x] = m->map_converted[y][x];
+
+	m->map_marked[y][x] = 0;
 	printf("UNMARKED: map_marked[%d][%d] = %d\n", y, x, m->map_marked[y][x]);
 
 	return (1);

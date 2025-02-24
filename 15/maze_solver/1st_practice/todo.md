@@ -51,3 +51,7 @@ A valid way found!
 1111111111111111
 valid map found: path finding possible
 ```
+
+## to fix
+
+- unmarking : wrong
